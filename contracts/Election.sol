@@ -1,53 +1,93 @@
 pragma solidity ^0.4.2;
 
-contract Election{
-    //후보자 모델
-    struct Candidate{
+contract Election {
+    // Model a Candidate
+    struct Candidate {
         uint id;
         string name;
         uint voteCount;
+        uint electionId;
     }
 
-    //투표한 계정 저장
+    //Model a Elections
+    struct Elections{
+        uint id;
+        string name;
+    }
+
+    struct VoteRecord{
+        uint election_id;
+        bool isvoted;
+    }
+
+    //투표 기록 저장 매핑
+    mapping(address => VoteRecord) public VoteRecords;
+
+    // 투표 유무 저장
     mapping(address => bool) public voters;
 
-    //후보자 저장
+    // 후보자 읽어오기
+    mapping(uint => Candidate) public candidates;
 
+    //선거 읽어오기
+    mapping(uint => Elections) public elections;
 
-    //후보자 읽기
-    mapping(uint=>Candidate) public candidates;
-
-    //후보자 카운트
+    // 후보자 카운터
     uint public candidatesCount;
+    
+    //선거 카운터
+    uint public electionCount;
 
-    //투표 이벤트
-    event votedEvent(uint indexed_candidateId);
-
-    //생성자
-    function Election() public{
-        addCandidate("candidate1");
-        addCandidate("candidate2");
+    function Election () public {
+        addElection("19대 대선");
+        addCandidate("1.홍준표",1);
+        addCandidate("2.문재인",1);
+        addCandidate("3.안철수",1);
+        addElection("20대 대선");
+        addCandidate("1.홍길동",2);
+        addCandidate("2.임꺽정",2);
+        addCandidate("3.장길산",2);
     }
 
-    function addCandidate(string _name) private{
+    function addCandidate (string _name,uint electionId) public {
         candidatesCount ++;
-        candidates[candidatesCount] = Candidate(candidatesCount,_name,0);
+        candidates[candidatesCount] = Candidate(candidatesCount, _name, 0,electionId);
     }
 
-    function vote(uint _candidateId) public{
-        //투표하지 않은 투표자에게 요청
-        require(!voters[msg.sender]);
+    function addElection(string _name) public{
+        electionCount ++;
+        elections[electionCount]= Elections(electionCount,_name);
+    }
 
-        //유효한 후보자 요청
-        require(_candidateId > 0 && _candidateId <= candidatesCount); //require에 만족 하지 못하는 반환값이 온다면 이 함수는 예외를 던지고 멈춤.
+    function vote (uint _candidateId) public {
+        // require that they haven't voted before
 
-        //투표한 유권자 기록하기
+        // require(!voters[msg.sender]);
+        require(!VoteRecords[msg.sender].isvoted);
+
+        // require a valid candidate
+        require(_candidateId > 0 && _candidateId <= candidatesCount);
+
+
+        VoteRecords[msg.sender].election_id= candidates[_candidateId].electionId;
+        VoteRecords[msg.sender].isvoted = true;
+        // record that voter has voted
         voters[msg.sender] = true;
 
-        //투표 카운트 갱신 코드
+        // update candidate vote Count
         candidates[_candidateId].voteCount ++;
 
-        //투표 이벤트 트리거
-        votedEvent(_candidateId);
     }
+
+    function getvoteCount(uint _candidateId) public view returns (uint) {
+        require(_candidateId > 0 && _candidateId <= candidatesCount);
+
+        return candidates[_candidateId].voteCount;
+    }
+
+    function getelectionName(uint _electionId) public view returns(string){
+        return elections[_electionId].name;
+    }
+
+
 }
